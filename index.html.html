@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>월·화·수 1인 지정 선착순 예약 포털</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- 상단 네비게이션 바 -->
+    <header class="bg-indigo-600 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2.5 rounded-xl border border-white/20">
+                    <i class="fa-solid fa-stopwatch text-xl text-yellow-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">1인 전용 선착순 예약 포털</h1>
+                    <p class="text-indigo-200 text-xs">월·화·수 / 타임슬롯당 정확히 1인 제한</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 bg-indigo-700/60 p-1.5 rounded-xl border border-indigo-500/40">
+                <button id="navStudentBtn" onclick="switchMode('student')" class="px-4 py-2 rounded-lg font-medium text-sm transition shadow-sm bg-white text-indigo-700">
+                    <i class="fa-solid fa-user-graduate mr-1.5"></i> 학생 예약 모드
+                </button>
+                <button id="navAdminBtn" onclick="switchMode('admin')" class="px-4 py-2 rounded-lg font-medium text-sm transition text-indigo-100 hover:text-white">
+                    <i class="fa-solid fa-gear mr-1.5"></i> 관리자 모드
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- 알림 모달 영역 -->
+        <div id="alertBox" class="hidden mb-6 p-4 rounded-xl border flex items-center justify-between transition-all shadow-sm">
+            <div class="flex items-center space-x-3">
+                <i id="alertIcon" class="fa-solid text-lg"></i>
+                <span id="alertMessage" class="font-medium text-sm"></span>
+            </div>
+            <button onclick="closeAlert()" class="text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+        </div>
+
+        <!-- ================= 학생 예약 모드 ================= -->
+        <section id="studentSection" class="space-y-6">
+            <!-- 안내 카드 -->
+            <div class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-800 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <span class="bg-yellow-400 text-slate-900 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">타임슬롯당 정원 1명</span>
+                    <h2 class="text-2xl font-bold mt-2 mb-1">실시간 1:1 선착순 예약</h2>
+                    <p class="text-indigo-100 text-sm">원하시는 요일과 시간대를 확인하고 학번과 이름을 입력해 선점을 완료하세요.</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-md px-4 py-3 rounded-xl border border-white/20 text-sm flex items-center space-x-3">
+                    <i class="fa-solid fa-shield-halved text-yellow-300 text-2xl"></i>
+                    <div>
+                        <p class="font-semibold">공정 선착순 시스템</p>
+                        <p class="text-indigo-100 text-xs">선점된 시간은 즉시 마감됩니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 예약 컨트롤 및 현황판 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 좌측: 예약 입력 폼 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-800 border-b pb-3 flex items-center">
+                        <i class="fa-solid fa-pen-to-square text-indigo-600 mr-2"></i> 예약 신청하기
+                    </h3>
+                    
+                    <form id="bookingForm" onsubmit="handleBooking(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1.5">학번 (예: 20115)</label>
+                            <input type="text" id="studentId" required placeholder="학번 입력" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1.5">이름</label>
+                            <input type="text" id="studentName" required placeholder="학생 이름 입력" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1.5">요일 선택</label>
+                            <select id="selectDay" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white font-medium">
+                                <option value="월">월요일</option>
+                                <option value="화">화요일</option>
+                                <option value="수">수요일</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1.5">시간대 선택 (1인 제한)</label>
+                            <select id="selectSlot" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white font-medium">
+                                <!-- JS 동적 생성 -->
+                            </select>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-sm">
+                            <i class="fa-solid fa-bolt text-yellow-300"></i>
+                            <span>선착순 예약 신청</span>
+                        </button>
+                    </form>
+
+                    <!-- 내 예약 조회/취소 박스 -->
+                    <div class="mt-6 pt-6 border-t border-slate-100">
+                        <h4 class="text-sm font-bold text-slate-700 mb-2">내 예약 확인 및 취소</h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="lookupStudentId" placeholder="학번 입력" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono">
+                            <button onclick="lookupMyBookings()" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-900 transition">조회</button>
+                        </div>
+                        <div id="myBookingsResult" class="mt-3 space-y-2 max-h-40 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <!-- 우측: 요일별 시간대 현황판 -->
+                <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-3 border-b mb-4 gap-2">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-calendar-days text-indigo-600 mr-2"></i> 실시간 시간대별 현황판
+                        </h3>
+                        <!-- 요일 필터 버튼 -->
+                        <div class="flex space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                            <button onclick="filterDayTab('월')" id="tabDay월" class="px-3 py-1.5 rounded-lg transition bg-white text-indigo-600 shadow-sm">월요일</button>
+                            <button onclick="filterDayTab('화')" id="tabDay화" class="px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900">화요일</button>
+                            <button onclick="filterDayTab('수')" id="tabDay수" class="px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900">수요일</button>
+                        </div>
+                    </div>
+
+                    <!-- 현황 카드 리스트 -->
+                    <div id="slotsStatusContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 overflow-y-auto max-h-[550px] pr-1">
+                        <!-- 동적 생성 -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 관리자 모드 ================= -->
+        <section id="adminSection" class="hidden space-y-6">
+            <!-- 관리자 헤더 카드 -->
+            <div class="bg-slate-800 rounded-2xl p-6 text-white shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold mb-1">관리자 대시보드</h2>
+                    <p class="text-slate-300 text-sm">모든 요일별/시간대별 1인 예약 현황을 종합적으로 관리하고 강제 취소 또는 초기화할 수 있습니다.</p>
+                </div>
+                <div>
+                    <button onclick="resetAllData()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>전체 데이터 초기화</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 관리자 테이블 영역 -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center pb-3 border-b mb-4">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i> 전체 1인 선착순 예약 명단 (총 21개 슬롯 기준)
+                    </h3>
+                    <span id="totalReservationCount" class="text-xs font-semibold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">총 0건</span>
+                </div>
+
+                <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-100 text-slate-700 uppercase text-xs sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 rounded-l-lg">요일</th>
+                                <th class="px-4 py-3">시간대</th>
+                                <th class="px-4 py-3">예약 상태</th>
+                                <th class="px-4 py-3">예약자 학번</th>
+                                <th class="px-4 py-3">예약자 이름</th>
+                                <th class="px-4 py-3 text-right rounded-r-lg">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminBookingTableBody" class="divide-y divide-slate-100">
+                            <!-- 동적 생성 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400">
+        <p>&copy; 1인 전용 선착순 예약 포털시스템. All rights reserved.</p>
+    </footer>
+
+    <!-- 자바스크립트 로직 -->
+    <script>
+        const TIME_SLOTS = [
+            "조회시간",
+            "1교시 후 쉬는시간",
+            "2교시 후 쉬는시간",
+            "3교시 후 쉬는시간",
+            "4교시 후 쉬는시간",
+            "5교시 후 쉬는시간",
+            "6교시 후 쉬는시간"
+        ];
+
+        const DAYS = ["월", "화", "수"];
+
+        let db = JSON.parse(localStorage.getItem('single_reservation_db_v2')) || {
+            bookings: {} 
+        };
+
+        let currentActiveDayTab = "월";
+
+        function saveDB() {
+            localStorage.setItem('single_reservation_db_v2', JSON.stringify(db));
+        }
+
+        window.onload = function() {
+            populateSlotDropdowns();
+            renderStudentStatus();
+            renderAdminDashboard();
+        };
+
+        function populateSlotDropdowns() {
+            const selectSlot = document.getElementById('selectSlot');
+            let optionsHTML = '';
+            TIME_SLOTS.forEach(slot => {
+                optionsHTML += `<option value="${slot}">${slot}</option>`;
+            });
+            selectSlot.innerHTML = optionsHTML;
+        }
+
+        function switchMode(mode) {
+            const studentSec = document.getElementById('studentSection');
+            const adminSec = document.getElementById('adminSection');
+            const navStudentBtn = document.getElementById('navStudentBtn');
+            const navAdminBtn = document.getElementById('navAdminBtn');
+
+            if (mode === 'student') {
+                studentSec.classList.remove('hidden');
+                adminSec.classList.add('hidden');
+                navStudentBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition shadow-sm bg-white text-indigo-700";
+                navAdminBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition text-indigo-100 hover:text-white";
+                renderStudentStatus();
+            } else {
+                studentSec.classList.add('hidden');
+                adminSec.classList.remove('hidden');
+                navAdminBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition shadow-sm bg-white text-indigo-700";
+                navStudentBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition text-indigo-100 hover:text-white";
+                renderAdminDashboard();
+            }
+        }
+
+        function showAlert(message, type = 'success') {
+            const alertBox = document.getElementById('alertBox');
+            const alertMessage = document.getElementById('alertMessage');
+            const alertIcon = document.getElementById('alertIcon');
+
+            alertMessage.innerText = message;
+            
+            if (type === 'success') {
+                alertBox.className = "mb-6 p-4 rounded-xl border flex items-center justify-between transition-all shadow-sm bg-emerald-50 border-emerald-200 text-emerald-800";
+                alertIcon.className = "fa-solid fa-circle-check text-emerald-600 text-lg";
+            } else {
+                alertBox.className = "mb-6 p-4 rounded-xl border flex items-center justify-between transition-all shadow-sm bg-rose-50 border-rose-200 text-rose-800";
+                alertIcon.className = "fa-solid fa-circle-exclamation text-rose-600 text-lg";
+            }
+            alertBox.classList.remove('hidden');
+
+            setTimeout(() => {
+                closeAlert();
+            }, 4000);
+        }
+
+        function closeAlert() {
+            document.getElementById('alertBox').classList.add('hidden');
+        }
+
+        function handleBooking(e) {
+            e.preventDefault();
+            const studentId = document.getElementById('studentId').value.trim();
+            const name = document.getElementById('studentName').value.trim();
+            const day = document.getElementById('selectDay').value;
+            const slot = document.getElementById('selectSlot').value;
+
+            const slotKey = `${day}_${slot}`;
+
+            if (db.bookings[slotKey]) {
+                showAlert(`이미 [${day}요일 ${slot}]은 다른 학생(${db.bookings[slotKey].name})이 예약하여 마감되었습니다!`, 'error');
+                renderStudentStatus();
+                return;
+            }
+
+            const existingBookingKey = Object.keys(db.bookings).find(key => db.bookings[key].studentId === studentId);
+            if (existingBookingKey) {
+                const [exDay, exSlot] = existingBookingKey.split('_');
+                showAlert(`이미 [${exDay}요일 ${exSlot}]에 예약 내역이 존재합니다. 1인당 1개의 시간대만 예약할 수 있습니다.`, 'error');
+                return;
+            }
+
+            db.bookings[slotKey] = {
+                studentId,
+                name,
+                timestamp: Date.now()
+            };
+            saveDB();
+
+            showAlert(`[${day}요일 ${slot}] 선착순 예약에 성공했습니다!`, 'success');
+            document.getElementById('bookingForm').reset();
+            renderStudentStatus();
+        }
+
+        function filterDayTab(day) {
+            currentActiveDayTab = day;
+            DAYS.forEach(d => {
+                const btn = document.getElementById(`tabDay${d}`);
+                if (d === day) {
+                    btn.className = "px-3 py-1.5 rounded-lg transition bg-white text-indigo-600 shadow-sm";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900";
+                }
+            });
+            renderStudentStatus();
+        }
+
+        function renderStudentStatus() {
+            const container = document.getElementById('slotsStatusContainer');
+            let html = '';
+
+            TIME_SLOTS.forEach(slot => {
+                const slotKey = `${currentActiveDayTab}_${slot}`;
+                const reservation = db.bookings[slotKey];
+                const isBooked = !!reservation;
+
+                html += `
+                    <div class="border rounded-xl p-4 flex flex-col justify-between space-y-3 transition-all ${isBooked ? 'bg-slate-100/80 border-slate-300' : 'bg-white border-slate-200 hover:border-indigo-300 shadow-sm'}">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-slate-800 text-sm flex items-center">
+                                <i class="fa-regular fa-clock text-indigo-500 mr-1.5"></i> ${slot}
+                            </span>
+                            <span class="text-xs font-bold px-2.5 py-1 rounded-full ${isBooked ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">
+                                ${isBooked ? '<i class="fa-solid fa-lock mr-1"></i> 마감됨' : '<i class="fa-solid fa-check mr-1"></i> 예약 가능 (1명)'}
+                            </span>
+                        </div>
+
+                        <div class="bg-white/80 p-3 rounded-lg border border-slate-200/60 text-xs flex justify-between items-center">
+                            <div>
+                                <span class="text-slate-400 block mb-0.5">예약자 정보</span>
+                                ${isBooked 
+                                    ? `<span class="font-bold text-slate-800 text-sm">${reservation.name} (${reservation.studentId})</span>` 
+                                    : `<span class="text-slate-400 italic">공석 상태 (선착순 대기 중)</span>`
+                                }
+                            </div>
+                            ${isBooked ? '<div class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></div>' : '<div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>'}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function lookupMyBookings() {
+            const studentId = document.getElementById('lookupStudentId').value.trim();
+            const resultBox = document.getElementById('myBookingsResult');
+
+            if (!studentId) {
+                resultBox.innerHTML = `<p class="text-xs text-rose-500">학번을 입력해주세요.</p>`;
+                return;
+            }
+
+            let foundKey = null;
+            for (const key in db.bookings) {
+                if (db.bookings[key].studentId === studentId) {
+                    foundKey = key;
+                    break;
+                }
+            }
+
+            if (!foundKey) {
+                resultBox.innerHTML = `<p class="text-xs text-slate-500 italic">해당 학번으로 예약된 내역이 없습니다.</p>`;
+                return;
+            }
+
+            const [day, slot] = foundKey.split('_');
+            const reservation = db.bookings[foundKey];
+
+            resultBox.innerHTML = `
+                <div class="bg-indigo-50 border border-indigo-200 p-3 rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                        <span class="font-bold text-indigo-900 block text-sm">${day}요일 | ${slot}</span>
+                        <span class="text-slate-600">${reservation.name} (${reservation.studentId})</span>
+                    </div>
+                    <button onclick="cancelBooking('${foundKey}')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg transition shadow-sm">예약 취소</button>
+                </div>
+            `;
+        }
+
+        function cancelBooking(slotKey) {
+            if (!confirm("예약을 취소하시겠습니까? 취소 후 다른 학생이 즉시 예약할 수 있습니다.")) return;
+            
+            delete db.bookings[slotKey];
+            saveDB();
+            showAlert("예약이 정상적으로 취소되었습니다.", "success");
+            
+            document.getElementById('lookupStudentId').value = '';
+            document.getElementById('myBookingsResult').innerHTML = '';
+            renderStudentStatus();
+            renderAdminDashboard();
+        }
+
+        function renderAdminDashboard() {
+            const tbody = document.getElementById('adminBookingTableBody');
+            const totalCountBadge = document.getElementById('totalReservationCount');
+
+            let totalBookedCount = Object.keys(db.bookings).length;
+            totalCountBadge.innerText = `총 예약 ${totalBookedCount}건 / 21개 슬롯`;
+
+            let html = '';
+
+            DAYS.forEach(day => {
+                TIME_SLOTS.forEach(slot => {
+                    const slotKey = `${day}_${slot}`;
+                    const res = db.bookings[slotKey];
+                    const isBooked = !!res;
+
+                    html += `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="px-4 py-3 font-bold text-slate-700">${day}요일</td>
+                            <td class="px-4 py-3 font-medium text-slate-800">${slot}</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${isBooked ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">
+                                    ${isBooked ? '마감됨 (1/1)' : '예약 가능 (0/1)'}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 font-mono text-xs">${isBooked ? res.studentId : '-'}</td>
+                            <td class="px-4 py-3 font-medium ${isBooked ? 'text-slate-900' : 'text-slate-400 italic'}">${isBooked ? res.name : '공석'}</td>
+                            <td class="px-4 py-3 text-right">
+                                ${isBooked ? `
+                                    <button onclick="adminCancelBooking('${slotKey}')" class="px-3 py-1 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-lg text-xs font-semibold transition">
+                                        강제 취소
+                                    </button>
+                                ` : '<span class="text-xs text-slate-400">-</span>'}
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function adminCancelBooking(slotKey) {
+            if (!confirm("관리자 권한으로 해당 예약을 강제 취소하시겠습니까?")) return;
+
+            delete db.bookings[slotKey];
+            saveDB();
+            showAlert("관리자에 의해 예약이 강제 취소되었습니다.", "success");
+            renderAdminDashboard();
+            renderStudentStatus();
+        }
+
+        function resetAllData() {
+            if (!confirm("모든 예약 데이터가 영구적으로 초기화됩니다. 진행하시겠습니까?")) return;
+            localStorage.removeItem('single_reservation_db_v2');
+            db = { bookings: {} };
+            renderStudentStatus();
+            renderAdminDashboard();
+            showAlert("모든 예약 데이터가 초기화되었습니다.", "success");
+        }
+    </script>
+</body>
+</html>
